@@ -174,14 +174,15 @@ class ScannetPreprocessing(BasePreprocessing):
 
             # gt_data = (points[:, -2] + 1) * 1000 + points[:, -1] + 1
             gt_data = points[:, -2] * 1000 + points[:, -1] + 1
-        else:
-            segments_test = "../../data/raw/scannet_test_segments"
-            segment_indexes_filepath = filepath.name.replace(".ply", ".0.010000.segs.json")
-            segments = self._read_json(f"{segments_test}/{segment_indexes_filepath}")
-            segments = np.array(segments["segIndices"])
-            # add segment id as additional feature
-            segment_ids = np.unique(segments, return_inverse=True)[1]
-            points = np.hstack((points, segment_ids[..., None]))
+        # TODO: this needs fixing of ScanNet segmentator
+        # else:
+        #     segments_test = "../../data/raw/scannet_test_segments"
+        #     segment_indexes_filepath = filepath.name.replace(".ply", ".0.010000.segs.json")
+        #     segments = self._read_json(f"{segments_test}/{segment_indexes_filepath}")
+        #     segments = np.array(segments["segIndices"])
+        #     # add segment id as additional feature
+        #     segment_ids = np.unique(segments, return_inverse=True)[1]
+        #     points = np.hstack((points, segment_ids[..., None]))
 
         processed_filepath = self.save_dir / mode / f"{scene:04}_{sub_scene:02}.npy"
         if not processed_filepath.parent.exists():

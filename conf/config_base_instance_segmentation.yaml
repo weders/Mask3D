@@ -15,7 +15,7 @@ general:
   save_visualizations: false
   visualization_point_size: 20
   decoder_id: -1
-  export: false
+  export: true
   use_dbscan: false
   ignore_class_threshold: 100
   project_name: scannet

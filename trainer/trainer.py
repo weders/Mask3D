@@ -95,6 +95,7 @@ class InstanceSegmentation(pl.LightningModule):
         return x
 
     def training_step(self, batch, batch_idx):
+        
         data, target, file_names = batch
 
         if data.features.shape[0] > self.config.general.max_batch_size:
@@ -145,7 +146,6 @@ class InstanceSegmentation(pl.LightningModule):
         pred_mask_path = f"{base_path}/pred_mask"
 
         Path(pred_mask_path).mkdir(parents=True, exist_ok=True)
-
         file_name = file_names
         with open(f"{base_path}/{file_name}.txt", "w") as fout:
             real_id = -1
@@ -154,7 +154,6 @@ class InstanceSegmentation(pl.LightningModule):
                 pred_class = pred_classes[instance_id]
                 score = scores[instance_id]
                 mask = pred_masks[:, instance_id].astype("uint8")
-
                 if score > self.config.general.export_threshold:
                     # reduce the export size a bit. I guess no performance difference
                     np.savetxt(f"{pred_mask_path}/{file_name}_{real_id}.txt", mask, fmt="%d")
@@ -335,7 +334,9 @@ class InstanceSegmentation(pl.LightningModule):
         v.save(f"{self.config['general']['save_dir']}/visualizations/{rel_path}/{file_name}")
 
     def eval_step(self, batch, batch_idx):
+        print(batch)
         data, target, file_names = batch
+        print(file_names)
         inverse_maps = data.inverse_maps
         target_full = data.target_full
         original_colors = data.original_colors
@@ -347,6 +348,7 @@ class InstanceSegmentation(pl.LightningModule):
         if self.config.data.add_raw_coordinates:
             raw_coordinates = data.features[:, -3:]
             data.features = data.features[:, :-3]
+
 
         data = ME.SparseTensor(coordinates=data.coordinates, features=data.features, device=self.device)
         output = self.forward(data,
@@ -409,14 +411,12 @@ class InstanceSegmentation(pl.LightningModule):
             scores_per_query, topk_indices = mask_cls.flatten(0, 1).topk(self.config.general.topk_per_image, sorted=True)
         else:
             scores_per_query, topk_indices = mask_cls.flatten(0, 1).topk(num_queries, sorted=True)
-
         labels_per_query = labels[topk_indices]
         topk_indices = topk_indices // num_classes
         mask_pred = mask_pred[:, topk_indices]
 
         result_pred_mask = (mask_pred > 0).float()
         heatmap = mask_pred.float().sigmoid()
-
         mask_scores_per_image = (heatmap * result_pred_mask).sum(0) / (result_pred_mask.sum(0) + 1e-6)
         score = scores_per_query * mask_scores_per_image
         classes = labels_per_query
@@ -431,7 +431,7 @@ class InstanceSegmentation(pl.LightningModule):
             label_offset = 2
         if not self.config.data.is_scannet:
             label_offset = 0
-
+        
         prediction = output['aux_outputs']
         prediction.append({
             'pred_logits': output['pred_logits'],
@@ -483,7 +483,7 @@ class InstanceSegmentation(pl.LightningModule):
                                     new_preds['pred_masks'].append(original_pred_masks * (new_mask == cluster_id + 1))
                                     new_preds['pred_logits'].append(
                                         prediction[self.decoder_id]['pred_logits'][bid, curr_query])
-
+                    
                     scores, masks, classes, heatmap = self.get_mask_and_scores(
                         torch.stack(new_preds['pred_logits']).cpu(),
                         torch.stack(new_preds['pred_masks']).T,
@@ -619,6 +619,7 @@ class InstanceSegmentation(pl.LightningModule):
                 'pred_classes': self.validation_dataset._remap_model_output(all_pred_classes[bid].cpu() + label_offset)[all_pred_scores[bid] > self.config.general.scores_threshold]
             }
 
+
             if self.config.general.save_visualizations:
                 self.save_visualizations(target_full_res[bid],
                                          full_res_coords[bid],
@@ -633,7 +634,7 @@ class InstanceSegmentation(pl.LightningModule):
                                          rel_path="test",
                                          backbone_features=backbone_features,
                                          point_size=self.config.general.visualization_point_size)
-
+            
             if self.config.general.export:
                 self.export(
                     self.preds[file_names[bid]]['pred_masks'],

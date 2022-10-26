@@ -85,6 +85,7 @@ class SemanticSegmentationDataset(Dataset):
 
         self.mode = mode
         self.data_dir = data_dir
+              
         self.add_unlabeled_pc = add_unlabeled_pc
         if add_unlabeled_pc:
             self.other_database = self._load_yaml(
@@ -373,8 +374,8 @@ class SemanticSegmentationDataset(Dataset):
 
         # normalize color information
         pseudo_image = color.astype(np.uint8)[np.newaxis, :, :]
-        color = np.squeeze(self.normalize_color(image=pseudo_image)["image"])
 
+        color = np.squeeze(self.normalize_color(image=pseudo_image)["image"])
         # prepare labels and map from 0 to 20(40)
         labels = labels.astype(np.int32)
         if labels.size > 0:
@@ -391,11 +392,15 @@ class SemanticSegmentationDataset(Dataset):
         if self.add_raw_coordinates:
             features = np.hstack((features, coordinates))
 
-        if self.data[idx]['raw_filepath'].split("/")[-2] in ['scene0636_00', 'scene0154_00']:
+        if self.data[idx]['raw_filepath'].split("/")[-1] in ['scene0636_00', 'scene0154_00']:
             return self.__getitem__(0)
+
 
         if "s3dis" in self.data_dir[0].split("/")[-1]:
             return coordinates, features, labels, self.data[idx]['area'] + "_" + self.data[idx]['scene'], raw_color, raw_normals, raw_coordinates, idx
+        elif "scannet_iterative" in self.data_dir[0].split("/")[-1]:
+            return coordinates, features, labels, self.data[idx]['filepath'].split("/")[-1].replace('.npy', ''), raw_color, raw_normals, raw_coordinates, idx
+
         else:
             return coordinates, features, labels, self.data[idx]['raw_filepath'].split("/")[-2], raw_color, raw_normals, raw_coordinates, idx
 
